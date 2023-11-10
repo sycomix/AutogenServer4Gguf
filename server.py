@@ -32,12 +32,9 @@ def tweaked_talk(llm, dialog, stop, data, idx, max_tokens=4096, temperature=0):
                 if index == 0:
                     prepromt = f"role: {item['role']}\n{item['content']}\n\n"
                 elif index <= idx and index >= 2:
-                    dialogue = dialogue + ''
+                    dialogue = f'{dialogue}'
                 else:
-                    dialogue = dialogue + f"role: {item['role']}\n{item['content']}\n\n"
-            else:
-                pass
-
+                    dialogue = f"{dialogue}role: {item['role']}\n{item['content']}\n\n"
         dialogue = prepromt + dialogue
         return dialogue  # Return the updated 'dialogue' variable
 
@@ -48,7 +45,7 @@ def tweaked_talk(llm, dialog, stop, data, idx, max_tokens=4096, temperature=0):
             v *= 2  # Update the value of 'v' in the loop
             text = slicer(data, v).encode()
             vtc = len(llm.tokenize(text))
-            
+
         else:
             break
 
@@ -78,48 +75,38 @@ def autogen_chat_completion():
     # so basicaly the main function to create completions
     data=request.json
 
-    if data['model']:
-        model_name = data['model']
-    else:
-        model_name = MODEL
-    print('model name: ' + model_name)
+    model_name = data['model'] if data['model'] else MODEL
+    print(f'model name: {model_name}')
     print()
 
     # Check if the 'model' key exists in the data dictionary
-    if 'temperature' in data:
-        # The 'model' key is present, so you can safely access its value
-        temperature = data['temperature']
-    else:
-        # Handle the case when 'model' key is not present
-        temperature = 0
-
+    temperature = data['temperature'] if 'temperature' in data else 0
     max_tokens = 4096
     stop = []
 
     dialogue = """"""
     messages = data['messages']
-    
+
     for i in messages:
         dialogue = dialogue + i['role'].replace('\n', '') + ':\n'
         dialogue = dialogue + i['content'].replace('\n\n', '')
         dialogue = dialogue + '\n\n\n'
-    
-    llm = Llama(model_path=model_path+MODEL)
-    context = int(len(llm.tokenize(dialogue.encode())))
 
-    idx = 3
+    llm = Llama(model_path=model_path+MODEL)
+    context = len(llm.tokenize(dialogue.encode()))
+
     if context <= max_tokens - 1:
         
         print('\nstandard dialogue: \n', dialogue)
         print('#############################################################################\n#############################################################################\n\n\n')
         output = talk(llm, dialogue, stop, max_tokens, temperature)
-        return jsonify(output)
-    
     else:
         print('too much tokens, sorry but the start of you\'re chat will be ignored')
-    
+
+        idx = 3
         output = tweaked_talk(llm, dialogue, stop, data, idx, max_tokens, temperature)
-        return jsonify(output)
+
+    return jsonify(output)
 
 
 
